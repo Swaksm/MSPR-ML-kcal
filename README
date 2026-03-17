@@ -1,31 +1,80 @@
-HealthAI — Calorie Counter
-Free text → kcal. Powered by spaCy NER.
-Setup
-bashpip install spacy
-python -m spacy download en_core_web_sm
-Train the NER model (once)
-bashpython nlp/train_ner.py
-Generates nlp/food_ner_model/ — the trained model.
-Without it, falls back to regex automatically.
-Run
-bashpython test.py        # interactive
-python test.py --test # batch examples
-Use in FastAPI
-pythonfrom analyze import analyze
+# HealthAI Coach — Backend IA & Analyse Nutritionnelle
 
-result = analyze("2 eggs and a banana")
-print(result.total_kcal)   # 307.0
-print(result.items)        # [{"food": "egg", "grams": 120, "kcal": 186}, ...]
-print(result.message)      # "This meal contains approximately 307 kcal."
-Structure
+Projet réalisé dans le cadre de la formation **Concepteur Développeur d'Applications** (RNCP36581).
+
+## 🎯 Contexte
+
+HealthAI Coach est une startup fictive spécialisée dans le coaching santé connecté. Ce dépôt contient le **module IA** développé pour analyser les repas en langage naturel et estimer leur apport calorique.
+
+## 🧠 Module IA
+
+Le cœur du projet repose sur un modèle **NER (Named Entity Recognition)** entraîné avec spaCy, capable de :
+
+- Comprendre des phrases en texte libre (`"j'ai mangé 200g de poulet avec du riz et une pomme"`)
+- Reconnaître les entités alimentaires (`FOOD`) et les quantités (`QUANTITY`) même avec des fautes de frappe
+- Calculer les kcal à partir d'une base nutritionnelle issue des datasets Kaggle
+- Fonctionner entièrement **en local**, sans API externe, **100% gratuit**
+
+## 🗂️ Structure
+
+```
 ai_simple/
 ├── data/
-│   ├── nutrition_data.py      # loads kaggle_nutrition.csv
-│   └── kaggle_nutrition.csv   # ← put your Kaggle CSV here
+│   ├── nutrition_data.py          # Chargement de la base nutritionnelle
+│   ├── kaggle_nutrition.csv       # Dataset Kaggle + données fast-food ajoutées
+│   └── training_sentences.json   # ~1000 phrases annotées pour l'entraînement
 ├── nlp/
-│   ├── parser.py              # spaCy NER + regex fallback
-│   ├── train_ner.py           # training script
-│   └── food_ner_model/        # generated after training
-├── analyze.py                 # main interface
-├── test.py
+│   ├── parser.py                  # Parseur NER + fallback regex
+│   ├── train_ner.py               # Script d'entraînement du modèle spaCy
+│   └── food_ner_model/            # Modèle entraîné (généré localement)
+├── analyze.py                     # Interface principale
+├── test.py                        # Tests interactifs et batch
 └── requirements.txt
+```
+
+## 🚀 Installation
+
+```bash
+pip install spacy
+python -m spacy download en_core_web_sm
+```
+
+## 🏋️ Entraînement
+
+```bash
+python nlp/train_ner.py
+```
+
+## ▶️ Utilisation
+
+```bash
+python test.py
+```
+
+```python
+from analyze import analyze
+
+result = analyze("2 oeufs et une banane")
+print(result.total_kcal)   # 293.0
+print(result.message)      # "This meal contains approximately 293 kcal."
+```
+
+## 📦 Données
+
+- **[Daily Food & Nutrition Dataset](https://www.kaggle.com/datasets/adilshamim8/daily-food-and-nutrition-dataset)** — base nutritionnelle principale
+- **[Diet Recommendations Dataset](https://www.kaggle.com/datasets/ziya07/diet-recommendations-dataset)** — profils santé et recommandations
+- Données complémentaires ajoutées manuellement : fast-food (McDonald's, Burger King, O'Tacos, Tasty Crousty), plats du monde, produits du quotidien
+
+## 🛠️ Stack technique
+
+| Composant | Technologie |
+|---|---|
+| Modèle NER | spaCy (entraîné from scratch) |
+| Base nutritionnelle | CSV Kaggle + enrichissement manuel |
+| Backend (à venir) | FastAPI + SQLite |
+| Frontend (à venir) | React + Vercel |
+| Déploiement (à venir) | Railway + Docker |
+
+## 👥 Équipe
+
+Projet réalisé en équipe dans le cadre de la MSPR Bloc E6.1.
