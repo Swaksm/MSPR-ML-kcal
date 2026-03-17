@@ -1,5 +1,5 @@
 """
-Run: python test.py
+Run: python app.py
 """
 import sys
 from pathlib import Path
