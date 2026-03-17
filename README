@@ -1,0 +1,31 @@
+HealthAI — Calorie Counter
+Free text → kcal. Powered by spaCy NER.
+Setup
+bashpip install spacy
+python -m spacy download en_core_web_sm
+Train the NER model (once)
+bashpython nlp/train_ner.py
+Generates nlp/food_ner_model/ — the trained model.
+Without it, falls back to regex automatically.
+Run
+bashpython test.py        # interactive
+python test.py --test # batch examples
+Use in FastAPI
+pythonfrom analyze import analyze
+
+result = analyze("2 eggs and a banana")
+print(result.total_kcal)   # 307.0
+print(result.items)        # [{"food": "egg", "grams": 120, "kcal": 186}, ...]
+print(result.message)      # "This meal contains approximately 307 kcal."
+Structure
+ai_simple/
+├── data/
+│   ├── nutrition_data.py      # loads kaggle_nutrition.csv
+│   └── kaggle_nutrition.csv   # ← put your Kaggle CSV here
+├── nlp/
+│   ├── parser.py              # spaCy NER + regex fallback
+│   ├── train_ner.py           # training script
+│   └── food_ner_model/        # generated after training
+├── analyze.py                 # main interface
+├── test.py
+└── requirements.txt
