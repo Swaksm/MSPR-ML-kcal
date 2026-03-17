@@ -1,6 +1,6 @@
 """
-NLP parser — uses trained spaCy NER model if available,
-falls back to regex otherwise.
+NLP parser — spaCy NER only.
+Run nlp/train_ner.py first to generate the model.
 """
 
 import re, sys
@@ -51,7 +51,6 @@ IGNORED = {
     "the","of","some","bit","little","had","ate","have","eat","just",
 }
 
-# Explicit synonyms → canonical food name
 SYNONYMS = {
     "eggs": "egg",
     "salad": "lettuce",
@@ -75,13 +74,12 @@ SYNONYMS = {
 def _clean(raw: str) -> str:
     return " ".join(w for w in raw.strip().split() if w not in IGNORED and len(w) > 1)
 
+
 def _match_food(raw: str) -> str | None:
     raw = raw.strip().lower()
 
-    # Check synonyms first (before cleaning)
     if raw in SYNONYMS:
         return SYNONYMS[raw]
-    # Multi-word synonym check
     for syn, canonical in SYNONYMS.items():
         if syn in raw:
             return canonical
@@ -90,15 +88,11 @@ def _match_food(raw: str) -> str | None:
     if not raw:
         return None
 
-    # Exact match
     if raw in FOOD_DB:
         return raw
-
-    # Synonym after clean
     if raw in SYNONYMS:
         return SYNONYMS[raw]
 
-    # Partial match — longest food name first to avoid "egg" matching "egg white"
     for f in FOODS:
         if f == raw:
             return f
@@ -107,15 +101,18 @@ def _match_food(raw: str) -> str | None:
         if raw in f and len(raw) >= 4:
             return f
 
-    # Fuzzy match
     m = get_close_matches(raw, FOODS, n=1, cutoff=0.72)
     return m[0] if m else None
 
+
 def _grams(food: str, qty: float, unit: str) -> float:
     unit = unit.lower().strip()
-    if unit in ("g","gr","gram","grams"): return qty
-    if unit in UNITS: return qty * UNITS[unit]
+    if unit in ("g", "gr", "gram", "grams"):
+        return qty
+    if unit in UNITS:
+        return qty * UNITS[unit]
     return qty * PORTIONS.get(food, 100)
+
 
 def _dedup(items: list) -> list:
     result, seen = [], []
@@ -126,32 +123,38 @@ def _dedup(items: list) -> list:
             seen.append(f)
     return result
 
+
 def _qty_from_text(text: str) -> tuple[float, str]:
     text = text.strip().lower()
     m = re.match(r'^(\d+(?:\.\d+)?)\s*(g|gr|grams?|kg|ml|cl|oz|lb)$', text)
-    if m: return float(m.group(1)), m.group(2)
+    if m:
+        return float(m.group(1)), m.group(2)
     m = re.match(r'^(\d+(?:\.\d+)?)\s*(\w+)?$', text)
-    if m: return float(m.group(1)), m.group(2) or ""
-    if text in WORDS: return WORDS[text], ""
+    if m:
+        return float(m.group(1)), m.group(2) or ""
+    if text in WORDS:
+        return WORDS[text], ""
     return 1.0, ""
 
 
-# ── spaCy NER ─────────────────────────────────────────────────────────────────
-
 _nlp = None
 
-def _load_spacy():
+
+def _load_model():
     global _nlp
-    if _nlp is None and MODEL_DIR.exists():
+    if _nlp is None:
+        if not MODEL_DIR.exists():
+            raise FileNotFoundError(
+                f"Modèle introuvable : {MODEL_DIR}\n"
+                "Lance d'abord : python nlp/train_ner.py"
+            )
         import spacy
         _nlp = spacy.load(MODEL_DIR)
     return _nlp
 
-def _parse_spacy(text: str) -> list[dict] | None:
-    nlp = _load_spacy()
-    if nlp is None:
-        return None
 
+def parse(text: str) -> list[dict]:
+    nlp = _load_model()
     doc = nlp(text.lower())
     items = []
     last_qty, last_unit = 1.0, ""
@@ -166,60 +169,8 @@ def _parse_spacy(text: str) -> list[dict] | None:
                 items.append({"food": food, "grams": grams})
                 last_qty, last_unit = 1.0, ""
 
-    return _dedup(items) if items else None
+    return _dedup(items)
 
-
-# ── Regex fallback ────────────────────────────────────────────────────────────
-
-def _parse_regex(text: str) -> list[dict]:
-    text = re.sub(r"[,;.!?()\[\]]", " ", text.lower())
-    text = re.sub(r"\s+", " ", text).strip()
-    found, pos = [], []
-
-    for m in re.finditer(
-        r'(\d+(?:[.,]\d+)?)\s*(g|gr|grams?|kg|ml|cl|oz|lb|cups?|bowls?|glasses?|slices?|pieces?|tbsp|tsp|handfuls?|scoops?)\s*(?:of\s+)?([a-z][a-z\s]{1,30})',
-        text
-    ):
-        food = _match_food(m.group(3))
-        if food:
-            found.append({"food": food, "grams": _grams(food, float(m.group(1).replace(",",".")), m.group(2))})
-            pos.append((m.start(), m.end()))
-
-    for m in re.finditer(r'(\d+(?:[.,]\d+)?)\s+(?:of\s+)?([a-z][a-z\s]{1,25})', text):
-        if any(s <= m.start() <= e for s,e in pos): continue
-        food = _match_food(m.group(2))
-        if food:
-            found.append({"food": food, "grams": _grams(food, float(m.group(1).replace(",",".")), "")})
-            pos.append((m.start(), m.end()))
-
-    for m in re.finditer(
-        r'\b(one|two|three|four|five|six|seven|eight|nine|ten|a|an|half)\b\s+(?:cups?\s+of\s+|slices?\s+of\s+|pieces?\s+of\s+)?([a-z][a-z\s]{1,25})',
-        text
-    ):
-        if any(s <= m.start() <= e for s,e in pos): continue
-        food = _match_food(m.group(2))
-        if food:
-            found.append({"food": food, "grams": _grams(food, WORDS.get(m.group(1), 1), "")})
-            pos.append((m.start(), m.end()))
-
-    for food in FOODS:
-        if food in text and not any(i["food"] == food for i in found):
-            found.append({"food": food, "grams": PORTIONS.get(food, 100)})
-
-    return _dedup(found)
-
-
-# ── Public interface ──────────────────────────────────────────────────────────
-
-def parse(text: str) -> list[dict]:
-    result = _parse_spacy(text)
-    if result is not None:
-        if not result:
-            result = _parse_regex(text)
-        return result
-    return _parse_regex(text)
 
 def parser_info() -> str:
-    if MODEL_DIR.exists():
-        return "spaCy NER (trained model)"
-    return "regex fallback (run nlp/train_ner.py to train)"
+    return "spaCy NER (trained model)"
