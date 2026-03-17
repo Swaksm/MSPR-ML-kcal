@@ -51,16 +51,12 @@ ai_simple/
 │
 ├── analyze.py
 │   Point d'entrée principal. Contient la fonction analyze(text) qui
-│   orchestre le parseur et le calcul kcal. C'est ce fichier qui sera
-│   importé dans le backend FastAPI.
+│   orchestre le parseur et le calcul kcal.
 │
 ├── test.py
 │   Script de test interactif. Lance python test.py pour taper des
 │   repas en direct. Tape "test" pour lancer les exemples prédéfinis,
 │   "quit" pour quitter.
-│
-├── requirements.txt
-│   Dépendances Python nécessaires (spacy uniquement).
 │
 ├── data/
 │   │
