@@ -1,6 +1,6 @@
 # HealthAI — Module IA / Analyse Nutritionnelle
 
-Module d'intelligence artificielle du projet **HealthAI Coach**, développé dans le cadre de la formation Concepteur Développeur d'Applications (RNCP36581 — Bloc E6.1).
+Module d'intelligence artificielle du projet **Jarmy**, développé dans le cadre de la formation Concepteur Développeur d'Applications (RNCP36581 — Bloc E6.1).
 
 Ce module est **indépendant** et sera intégré ultérieurement dans le backend FastAPI.
 
