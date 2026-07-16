@@ -1,8 +1,5 @@
 # HealthAI — Module IA / Analyse Nutritionnelle
 
-Module d'intelligence artificielle du projet **Jarmy**, développé dans le cadre de la
-formation Concepteur Développeur d'Applications (RNCP36581 — Bloc 2 / E6.1).
-
 Ce module est **indépendant** et peut s'intégrer dans un backend FastAPI, Flask, ou
 un microservice Python.
 
